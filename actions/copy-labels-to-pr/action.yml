@@ -1,0 +1,11 @@
+name: 'Copy Issue labels to PR'
+description: "Copies the linked issue's labels to the PR"
+author: 'Appsmith'
+inputs:
+  accessToken:
+    description: 'access token required to comment on a pr'
+    required: false
+    default: ${{ github.token }}
+runs:
+  using: 'node16'
+  main: 'dist/index.js'

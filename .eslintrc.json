@@ -1,0 +1,28 @@
+// This JSON file configures the eslint plugin. It supports comments as well as per the JSON5 spec
+{
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint", "sort-destructure-keys"],
+  "extends": ["plugin:@typescript-eslint/recommended"],
+  "parserOptions": {
+    "ecmaVersion": 2020, // Allows for the parsing of modern ECMAScript features
+    "sourceType": "module" // Allows for the use of imports
+  },
+  "rules": {
+    "@typescript-eslint/no-explicit-any": 0,
+    "@typescript-eslint/no-use-before-define": 0,
+    "@typescript-eslint/no-var-requires": 0,
+    "no-undef": 0,
+    "@typescript-eslint/explicit-module-boundary-types": 0,
+    "sort-destructure-keys/sort-destructure-keys": ["error", {"caseSensitive": false}],
+    "no-console": "warn",
+    "no-debugger": "warn"
+  },
+  "settings": {
+    "import/resolver": {
+      "babel-module": {}
+    }
+  },
+  "env": {
+    "node": true
+  }
+}

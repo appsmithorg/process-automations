@@ -1,0 +1,14 @@
+{
+  "name": "copy-labels-to-pr",
+  "version": "1.0.0",
+  "main": "main.ts",
+  "scripts": {
+    "build": "tsc --outDir lib",
+    "package": "ncc build ./lib/main.js --source-map --license licenses.txt",
+    "build-and-package": "npm run build && npm run package"
+  },
+  "dependencies": {
+    "@actions/core": "^1.6.0",
+    "@actions/github": "^5.0.0"
+  }
+}
