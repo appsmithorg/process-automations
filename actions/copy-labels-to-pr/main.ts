@@ -46,6 +46,7 @@ async function run(): Promise<void> {
       closingIssueReferences.resource.labels,
       closingIssueReferences.resource.closingIssuesReferences,
     );
+
     if (labels.length) {
       try {
         await githubClient.rest.issues.addLabels({
