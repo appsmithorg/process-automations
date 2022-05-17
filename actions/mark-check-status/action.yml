@@ -1,0 +1,26 @@
+name: 'Mark check status as completed'
+description: "Creates or updates the status of a check to completed"
+author: 'Appsmith'
+inputs:
+  accessToken:
+    description: 'access token required to comment on a pr'
+    required: true
+    default: ${{ github.token }}
+  jobName:
+    description: 'The job name to update'
+    required: true
+  checkTitle:
+    description: 'The check that needs to be marked'
+    required: true
+  conclusion:
+    description: 'The conclusion of the job run'
+    required: true
+  repository:
+    description: 'The repository name where this PR exists'
+    required: true
+  run_id:
+    description: 'The current run id'
+    required: true
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
