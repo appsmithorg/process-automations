@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 
@@ -18,6 +19,16 @@ async function run(): Promise<void> {
   const prNumber = context.payload.pull_request.number;
   const repoOwner = context.repo.owner;
   const repoName = context.repo.repo;
+
+  console.log("Arguments", {
+    jobName,
+    checkTitle,
+    conclusion,
+    repository,
+    run_id,
+    prNumber,
+    repoName,
+  });
 
   // Get the current pull request
   const { data: pull } = await githubClient.rest.pulls.get({
