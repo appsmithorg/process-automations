@@ -8,6 +8,11 @@ const compile = require("es6-template-strings/compile"),
 
 let currentDate;
 
+let workspaceMap = {
+  "BE Coders Pod": "6167d73fab4b07001219a3d0",
+  "App Viewers Pod": "616922264a5ea000108d319d",
+}
+
 let priorityMap = {
   Critical: `🔴 Crit-`,
   High: `🟠 High`,
@@ -31,7 +36,7 @@ const ADHOC = "Ad-hoc tasks";
 getZenhubInfo = async () => {
   let fileName = path.resolve(__dirname, "zenhubInfo.graphql");
   const fileData = fs.readFileSync(fileName, "utf8");
-  const query = template(fileData, { podName: process.env.POD });
+  const query = template(fileData, { podName: process.env.POD , workspaceId: workspaceMap[process.env.POD]});
   let body = {
     query: query,
     operationName: null,
@@ -69,6 +74,8 @@ getPlannedTasks = async (sprint) => {
   categories.set(ADHOC, uncategorized);
 
   let categorizedIssues = new Map();
+  categorizedIssues.set(ADHOC, []);
+
   for (const issue of issues) {
     let existingIssues = [];
     if (!!issue.closedAt) {
@@ -111,19 +118,8 @@ getClosedTasks = async (sprint, enclosedIn) => {
       closedAtMs > enclosedIn.isoWeekday(1).valueOf() &&
       closedAtMs < enclosedIn.isoWeekday(7).valueOf();
 
-    console.log(
-      closedAtMs +
-        " " +
-        enclosedIn.isoWeekday(1) +
-        " " +
-        enclosedIn.isoWeekday(7) +
-        " " +
-        isClosedThisWeek
-    );
     return isClosed && isClosedThisWeek;
   });
-
-  console.log(issues);
 
   let categories = new Map();
 
@@ -134,6 +130,7 @@ getClosedTasks = async (sprint, enclosedIn) => {
   categories.set(ADHOC, uncategorized);
 
   let closedIssues = new Map();
+  closedIssues.set(ADHOC, []);
   for (const issue of issues) {
     let existingIssues = [];
 

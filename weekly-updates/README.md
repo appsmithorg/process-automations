@@ -6,8 +6,12 @@ To set this up on your local, please follow these steps:
 npm i
 ```
 2. Set up environment variables. Please find a copy of expected variables in the `dev.env` file. Copy this file into one called `.env` and fill in your Zenhub key to get started.
-3. Run server
+```
+cp dev.env .env
+```
+3. If this is your first time running this utility for your pod, please make sure that your pod is registered in the `workspaceMap` in `index.js`. You can find you workspaceId in the Zenhub url for your pod.
+4. Run server
 ```
 npm start
 ```
-4. Hit the server with a GET request at http://localhost:3000/lambda
+5. Hit the server with a GET request at http://localhost:3000/lambda

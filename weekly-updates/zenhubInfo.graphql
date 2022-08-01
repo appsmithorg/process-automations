@@ -1,7 +1,7 @@
 {
   viewer {
     id
-    searchWorkspaces(query: "BE Coders Pod") {
+    searchWorkspaces(query: "${podName}") {
       nodes {
         id
         closedPipeline {
@@ -58,7 +58,7 @@
                   login
                 }
               }
-              pipelineIssue(workspaceId: "6167d73fab4b07001219a3d0") {
+              pipelineIssue(workspaceId: "${workspaceId}") {
                 pipeline {
                   id
                   name
@@ -104,7 +104,7 @@
                   login
                 }
               }
-              pipelineIssue(workspaceId: "6167d73fab4b07001219a3d0") {
+              pipelineIssue(workspaceId: "${workspaceId}") {
                 pipeline {
                   id
                   name
@@ -150,7 +150,7 @@
                   login
                 }
               }
-              pipelineIssue(workspaceId: "6167d73fab4b07001219a3d0") {
+              pipelineIssue(workspaceId: "${workspaceId}") {
                 pipeline {
                   id
                   name
