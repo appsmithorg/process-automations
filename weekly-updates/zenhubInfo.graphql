@@ -1,0 +1,165 @@
+{
+  viewer {
+    id
+    searchWorkspaces(query: "BE Coders Pod") {
+      nodes {
+        id
+        closedPipeline {
+          name
+          id
+        }
+        pipelinesConnection {
+          nodes {
+            name
+            id
+          }
+        }
+        name
+        repositoriesConnection {
+          nodes {
+            id
+            name
+          }
+        }
+        activeSprint {
+          id
+          name
+          startAt
+          endAt
+          issues {
+            nodes {
+              id
+              ghId
+              htmlUrl
+              number
+              title
+              closedAt
+              parentEpics {
+                nodes {
+                  id
+                  issue {
+                    id
+                    ghId
+                    htmlUrl
+                    title
+                  }
+                }
+              }
+              labels {
+                nodes {
+                  id
+                  name
+                }
+              }
+              assignees {
+                nodes {
+                  id
+                  name
+                  login
+                }
+              }
+              pipelineIssue(workspaceId: "6167d73fab4b07001219a3d0") {
+                pipeline {
+                  id
+                  name
+                }
+              }
+            }
+          }
+        }
+        previousSprint {
+          id
+          name
+          startAt
+          endAt
+          issues {
+            nodes {
+              id
+              ghId
+              htmlUrl
+              number
+              title
+              closedAt
+              parentEpics {
+                nodes {
+                  id
+                  issue {
+                    id
+                    ghId
+                    htmlUrl
+                    title
+                  }
+                }
+              }
+              labels {
+                nodes {
+                  id
+                  name
+                }
+              }
+              assignees {
+                nodes {
+                  id
+                  name
+                  login
+                }
+              }
+              pipelineIssue(workspaceId: "6167d73fab4b07001219a3d0") {
+                pipeline {
+                  id
+                  name
+                }
+              }
+            }
+          }
+        }
+        upcomingSprint {
+          id
+          name
+          startAt
+          endAt
+          issues {
+            nodes {
+              id
+              ghId
+              htmlUrl
+              number
+              title
+              closedAt
+              parentEpics {
+                nodes {
+                  id
+                  issue {
+                    id
+                    ghId
+                    htmlUrl
+                    title
+                  }
+                }
+              }
+              labels {
+                nodes {
+                  id
+                  name
+                }
+              }
+              assignees {
+                nodes {
+                  id
+                  name
+                  login
+                }
+              }
+              pipelineIssue(workspaceId: "6167d73fab4b07001219a3d0") {
+                pipeline {
+                  id
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
