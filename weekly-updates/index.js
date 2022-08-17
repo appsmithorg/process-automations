@@ -59,7 +59,7 @@ getZenhubInfoStatic = async () => {
   return fileData;
 };
 
-getPlannedTasks = async (sprint) => {
+let getPlannedTasks = async (sprint) => {
   if (sprint.issues.nodes.length === 0) {
     return {};
   }
@@ -104,7 +104,7 @@ getPlannedTasks = async (sprint) => {
   return categorizedIssues;
 };
 
-getClosedTasks = async (sprint, enclosedIn) => {
+let getClosedTasks = async (sprint, enclosedIn) => {
   if (sprint.issues.nodes.length === 0) {
     return {};
   }
@@ -159,7 +159,7 @@ getClosedTasks = async (sprint, enclosedIn) => {
 
 getFormattedTasks = (categorizedIssues, isClosed) => {
   let issueRow =
-    "- ${issueType} [ ${priority} ] [${issueNo}](https://github.com/appsmithorg/appsmith/issues/${issueNo}): ${title} ${status} | **${assignees}**";
+    "- ${issueType} [ ${priority} ] [${issueNo}](https://github.com/appsmithorg/appsmith/issues/${issueNo}): ${title} ${status} (${estimate} SP) | **${assignees}**";
   let compiledRow = compile(issueRow);
 
   let sections = [];
@@ -199,6 +199,7 @@ getFormattedTasks = (categorizedIssues, isClosed) => {
         priority: priorityMap[priority] || "⚪ N/A-",
         issueNo: issue.number,
         title: issue.title,
+        estimate: issue.estimate ? issue.estimate.value : "No estimate",
         status: isClosed
           ? ""
           : "`" + issue.pipelineIssue.pipeline.name.toUpperCase() + "`",
@@ -223,7 +224,6 @@ getReport = async () => {
   // const zenhubData = await getZenhubInfoStatic();
   const zenhubData = await getZenhubInfo();
   const workspaceData = zenhubData.data.viewer.searchWorkspaces.nodes[0];
-
   // Figure out where in the sprint we currently are
   let currentSprintEndDate = workspaceData.activeSprint.endAt;
   let dateDiff = moment(currentSprintEndDate).diff(currentDate, "days");
