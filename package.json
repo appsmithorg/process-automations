@@ -7,7 +7,7 @@
     "lint": "eslint actions/**/*.ts"
   },
   "devDependencies": {
-    "@types/node": "^17.0.23",
+    "@types/node": "^18.7.12",
     "@typescript-eslint/eslint-plugin": "^5.31.0",
     "@typescript-eslint/parser": "^5.16.0",
     "@vercel/ncc": "^0.33.3",
