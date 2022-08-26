@@ -1,4 +1,4 @@
-import githubQuery from "./github-graphql-query"
+import githubQuery from "./common/github-graphql-query"
 
 // Ref: <https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/using-the-api-to-manage-projects>.
 
@@ -17,7 +17,7 @@ type ProjectSyncConfig = {
 async function main(): Promise<void> {
   const githubToken = process.env.GITHUB_TOKEN_FOR_SYNC_PROJECTS
   if (githubToken == null) {
-    throw new Error("sync-github-project-issues environment variable not set")
+    throw new Error("GITHUB_TOKEN_FOR_SYNC_PROJECTS environment variable not set")
   }
 
   const projects: Project[] = await loadAllProjects(githubToken)

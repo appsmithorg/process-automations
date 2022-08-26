@@ -15,6 +15,6 @@ jobs:
           yarn install --frozen-lockfile
 
       - env:
-          GITHUB_TOKEN_FOR_SYNC_PROJECTS: ${{ secrets.TOKEN_FOR_SYNC_PROJECTS }}
+          GITHUB_TOKEN_FOR_CONTRIBUTORS: ${{ secrets.TOKEN_FOR_SYNC_CONTRIBUTORS }}
         run: |
-          yarn run ts-node "src/sync-github-project-issues.ts"
+          yarn run ts-node "src/sync-contributors.ts"
