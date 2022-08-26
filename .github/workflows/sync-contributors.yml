@@ -1,4 +1,4 @@
-name: 'sync-github-project-issues'
+name: 'sync-contributors'
 
 on:
   workflow_dispatch:
