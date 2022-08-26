@@ -59,8 +59,14 @@ async function main(): Promise<void> {
     },
   )
 
-  const newReadme = await generateNewReadme(Buffer.from(readmeResponse.content, "base64").toString("utf8"), lines)
+  const oldReadmeContent = Buffer.from(readmeResponse.content, "base64").toString("utf8")
+  const newReadme = await generateNewReadme(oldReadmeContent, lines)
   console.log(newReadme)
+
+  if (newReadme === oldReadmeContent) {
+    console.log("No change to README.md")
+    return
+  }
 
   const updateResponse = await jsonRequest<{ content?: unknown }>("https://api.github.com/repos/appsmithorg/appsmith/contents/README.md", {
     method: "PUT",
@@ -76,7 +82,7 @@ async function main(): Promise<void> {
     },
   })
 
-  if (updateResponse.content != null) {
+  if (updateResponse.content == null) {
     console.log(updateResponse)
     process.exit(1)
   }
