@@ -152,6 +152,8 @@ async function fetchOpenIssuesWithLabel(githubToken: string, repo: string, label
         issues(labels: "${ label }", states: OPEN, first: 100${ afterId == null ? "" : `, after: "${ afterId }"` }) {
           nodes {
             id
+            number
+            title
           }
           pageInfo {
             hasNextPage
@@ -162,8 +164,7 @@ async function fetchOpenIssuesWithLabel(githubToken: string, repo: string, label
     }`))
 
     const issueNodes = r.data.repository.issues.nodes
-
-    console.log(r)
+    console.log(issueNodes)
 
     for (const issue of issueNodes) {
       ids.add(issue.id)
@@ -185,7 +186,7 @@ async function fetchIssuesInProject(githubToken: string, projectNumber: number):
   let afterId: null | string = null
 
   type Response = {
-    data: {
+    data?: {
       organization: {
         projectV2: {
           id: string
@@ -195,6 +196,10 @@ async function fetchIssuesInProject(githubToken: string, projectNumber: number):
                 id: string
               }
             }[]
+            pageInfo: {
+              hasNextPage: boolean
+              endCursor: string
+            }
           }
         }
       }
@@ -223,11 +228,20 @@ async function fetchIssuesInProject(githubToken: string, projectNumber: number):
                   }
                 }
               }
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
             }
           }
         }
       }
     `))
+
+    if (r.data == null) {
+      console.error("No organization in response", r)
+      throw new Error("No organization")
+    }
 
     const project = r.data.organization.projectV2
 
@@ -241,8 +255,8 @@ async function fetchIssuesInProject(githubToken: string, projectNumber: number):
       issueIds.add(item.content.id)
     }
 
-    if (project.items.nodes.length > 0) {
-      afterId = project.items.nodes[project.items.nodes.length - 1].content.id
+    if (project.items.pageInfo.hasNextPage) {
+      afterId = project.items.pageInfo.endCursor
     } else {
       break
     }
