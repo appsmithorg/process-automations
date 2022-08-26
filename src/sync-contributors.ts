@@ -1,6 +1,10 @@
 import githubQuery from "./common/github-graphql-query"
 import jsonRequest from "./common/json-request"
 
+// Note: Many of the calls to `api.github.com` in this script are rate-limited. To avoid that, we send the API Key along, although it's not required.
+
+const TEAM_MEMBER_CONTRIBUTION_BONUS = 1000
+
 main().catch((error) => console.error(error))
 
 type Contributor = {
@@ -26,14 +30,19 @@ async function main(): Promise<void> {
   // Add a few others.
   teamMembers.add("vicky-primathon")
 
-  const allContributors: Contributor[] = (await fetchAllContributors())
+  const allContributors: Contributor[] = (await fetchAllContributors(githubToken))
     .filter((contributor) => !contributor.login.endsWith("-bot"))
     .map((contributor) => {
-      if (teamMembers.has(contributor.login)) {
-        contributor.contributions += 1000
+      if (teamMembers.delete(contributor.login)) {
+        contributor.contributions += TEAM_MEMBER_CONTRIBUTION_BONUS
       }
       return contributor
     })
+
+  // Now `teamMembers` contains the team members who are not already in `allContributors`.
+  for (const member of teamMembers) {
+    allContributors.push(await fetchUserContributor(githubToken, member))
+  }
 
   allContributors.sort((user1, user2) => {
     if (user1.contributions < user2.contributions) {
@@ -55,9 +64,15 @@ async function main(): Promise<void> {
     {
       headers: {
         "User-Agent": "",
+        "Authorization": "Token " + githubToken,
       },
     },
   )
+
+  if (readmeResponse.content == null) {
+    console.log("Readme response", readmeResponse)
+    throw new Error("Could not find README.md")
+  }
 
   const oldReadmeContent = Buffer.from(readmeResponse.content, "base64").toString("utf8")
   const newReadme = await generateNewReadme(oldReadmeContent, lines)
@@ -137,15 +152,21 @@ async function fetchTeamMembers(githubToken: string): Promise<Set<string>> {
   return members
 }
 
-async function fetchAllContributors(): Promise<Contributor[]> {
+async function fetchAllContributors(githubToken: string): Promise<Contributor[]> {
   const allContributors: Contributor[] = []
 
   for (let page = 1; page < 100; ++page) {
     const response: any[] = await jsonRequest("https://api.github.com/repos/appsmithorg/appsmith/contributors?per_page=100&page=" + page, {
       headers: {
         "User-Agent": "",
+        "Authorization": "Token " + githubToken,
       },
     })
+
+    if (!Array.isArray(response)) {
+      console.log("Unexpected contributors response", response)
+      throw new Error("Unexpected contributors response")
+    }
 
     for (const contributor of response) {
       if (contributor.type === "User") {
@@ -164,6 +185,22 @@ async function fetchAllContributors(): Promise<Contributor[]> {
   }
 
   return allContributors
+}
+
+async function fetchUserContributor(githubToken: string, login: string): Promise<Contributor> {
+  const response = await jsonRequest<any>("https://api.github.com/users/" + login, {
+    headers: {
+      "User-Agent": "",
+      "Authorization": "Token " + githubToken,
+    },
+  })
+
+  return {
+    login,
+    avatarUrl: response.avatar_url,
+    profileUrl: response.html_url,
+    contributions: TEAM_MEMBER_CONTRIBUTION_BONUS,
+  }
 }
 
 async function generateNewReadme(oldReadme: string, contributorLines: string[]): Promise<string> {
