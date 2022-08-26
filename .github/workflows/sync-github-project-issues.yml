@@ -3,10 +3,6 @@ name: 'sync-github-project-issues'
 on:
   workflow_dispatch:
 
-permissions:
-  repository-projects: write
-  contents: read
-
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -19,4 +15,4 @@ jobs:
           yarn install --frozen-lockfile
           make sync-github-project-issues
         env:
-          GITHUB_TOKEN_FOR_SYNC_PROJECTS: ${{ github.token }}
+          GITHUB_TOKEN_FOR_SYNC_PROJECTS: ${{ secrets.TOKEN_FOR_SYNC_PROJECTS }}
