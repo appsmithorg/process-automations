@@ -10,9 +10,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # The bulk of the work is started from the make command, so that it's easier to invoke from a developer's machine, not just CI.
-      - run: |
+      - name: Install dependencies
+        run: |
           yarn install --frozen-lockfile
-          make sync-github-project-issues
-        env:
+
+      - env:
           GITHUB_TOKEN_FOR_SYNC_PROJECTS: ${{ secrets.TOKEN_FOR_SYNC_PROJECTS }}
+        run: |
+          yarn run ts-node "src/sync-github-project-issues.ts" "DevOps Pod"
