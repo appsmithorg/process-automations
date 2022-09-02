@@ -11,7 +11,9 @@ let currentDate;
 let workspaceMap = {
   "BE Coders Pod": "6167d73fab4b07001219a3d0",
   "App Viewers Pod": "616922264a5ea000108d319d",
+  "Performance Board": "6231ad37179efb001826a53f"
 }
+
 
 let priorityMap = {
   Critical: `🔴 Crit-`,
