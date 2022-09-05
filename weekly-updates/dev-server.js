@@ -17,6 +17,7 @@ app.use("/lambda", async (req, res) => {
       headers: req.headers, // Pass on request headers
       body: req.body, // Pass on request body
     },
+    timeoutMs: 10000
   });
 
   // Respond to HTTP request

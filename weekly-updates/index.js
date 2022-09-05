@@ -11,6 +11,7 @@ let currentDate;
 let workspaceMap = {
   "BE Coders Pod": "6167d73fab4b07001219a3d0",
   "App Viewers Pod": "616922264a5ea000108d319d",
+  "FE Coders Pod": "6167d1b64ee5f20014242ab7"
 }
 
 let priorityMap = {
@@ -52,6 +53,27 @@ getZenhubInfo = async () => {
   const data = await response.json();
   return data;
 };
+
+getClosedIssuesInfo = async () => {
+  let fileName = path.resolve(__dirname, "closedIssues.graphql");
+  const fileData = fs.readFileSync(fileName, "utf8");
+  const query = template(fileData, {workspaceId: workspaceMap[process.env.POD]});
+  let body = {
+    query: query,
+    operationName: null,
+  };
+  const response = await fetch("https://api.zenhub.com/public/graphql", {
+    headers: {
+      authorization: "Bearer " + process.env.ZENHUB_KEY,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+    method: "POST",
+  });
+  const data = await response.json();
+  return data;
+};
+
 
 getZenhubInfoStatic = async () => {
   let fileName = path.resolve(__dirname, "testResponse.json");
@@ -104,12 +126,52 @@ getPlannedTasks = async (sprint) => {
   return categorizedIssues;
 };
 
-getClosedTasks = async (sprint, enclosedIn) => {
+getSpilledTasks = async (sprint) => {
   if (sprint.issues.nodes.length === 0) {
     return {};
   }
 
   let issues = sprint.issues.nodes;
+  let categories = new Map();
+
+  let uncategorized = {
+    title: ADHOC,
+  };
+
+  categories.set(ADHOC, uncategorized);
+
+  let categorizedIssues = new Map();
+  categorizedIssues.set(ADHOC, []);
+
+  for (const issue of issues) {
+    let existingIssues = [];
+    if (!!issue.closedAt) {
+      continue;
+    }
+    if (issue.parentEpics.nodes.length === 0) {
+      if (categorizedIssues.has(ADHOC)) {
+        existingIssues = categorizedIssues.get(ADHOC);
+      }
+
+      existingIssues.push(issue);
+      categorizedIssues.set(ADHOC, existingIssues);
+    } else {
+      let epic = issue.parentEpics.nodes[0].issue;
+      if (categorizedIssues.has(epic.title)) {
+        existingIssues = categorizedIssues.get(epic.title);
+      } else {
+        categories.set(epic.title, epic);
+      }
+
+      existingIssues.push(issue);
+      categorizedIssues.set(epic.title, existingIssues);
+    }
+  }
+
+  return categorizedIssues;
+};
+
+getClosedTasks = async (issues, enclosedIn) => {
 
   issues = issues.filter((issue) => {
     let isClosed = !!issue.closedAt;
@@ -222,7 +284,9 @@ getReport = async () => {
   // Uncomment the following like to use static data instead
   // const zenhubData = await getZenhubInfoStatic();
   const zenhubData = await getZenhubInfo();
+  const closedIssuesData = await getClosedIssuesInfo();
   const workspaceData = zenhubData.data.viewer.searchWorkspaces.nodes[0];
+  
 
   // Figure out where in the sprint we currently are
   let currentSprintEndDate = workspaceData.activeSprint.endAt;
@@ -230,36 +294,44 @@ getReport = async () => {
 
   let plannedTasks;
   let closedTasks;
+  let spilledTasks;
 
   let enclosedIn = currentDate;
   if (enclosedIn.isoWeekday() === 1) {
     // Only on Mondays, we actually want to see the report for last week
     enclosedIn.subtract(3, "days");
   }
-  if (dateDiff < 3) {
+  if (dateDiff <= 3) {
     // This sprint is about to end, planned tasks will be taken from the next sprint
     plannedTasks = await getPlannedTasks(workspaceData.upcomingSprint);
-    closedTasks = await getClosedTasks(workspaceData.activeSprint, enclosedIn);
-  } else if (dateDiff > 12) {
+    spilledTasks = await getSpilledTasks(workspaceData.activeSprint);
+    closedTasks = await getClosedTasks(closedIssuesData.data.searchClosedIssues.nodes, enclosedIn);
+  } else if (dateDiff > 3) {
     // We have started a new sprint recently, use closed issue data from previous sprint
     plannedTasks = await getPlannedTasks(workspaceData.activeSprint);
+    spilledTasks = await getSpilledTasks(workspaceData.previousSprint);
     closedTasks = await getClosedTasks(
-      workspaceData.previousSprint,
+      closedIssuesData.data.searchClosedIssues.nodes,
       enclosedIn
     );
   } else {
     // We're in the middle of the sprint, planned tasks will be taken from the current sprint
     plannedTasks = await getPlannedTasks(workspaceData.activeSprint);
-    closedTasks = await getClosedTasks(workspaceData.activeSprint, enclosedIn);
+    spilledTasks = {};
+    closedTasks = await getClosedTasks(closedIssuesData.data.searchClosedIssues.nodes, enclosedIn);
   }
 
   // Create markdown output for each section to be reported
   let plannedTasksMd = getFormattedTasks(plannedTasks);
+  let spilledTasksMd = getFormattedTasks(spilledTasks);
   let closedTasksMd = getFormattedTasks(closedTasks, true);
+
+  let spilledSection = spilledTasks == {} ? "" : "\n## Spillover\n---\n" + spilledTasksMd;
 
   return (
     "\n## What did we close?\n---\n" +
     closedTasksMd +
+    spilledSection +
     "\n## What are we working on?\n---\n" +
     plannedTasksMd
   );

@@ -1,0 +1,31 @@
+{
+  searchClosedIssues(
+    workspaceId: "${workspaceId}"
+    filters: {displayType: issues}
+    first: 20
+  ) {
+    nodes {
+      closedAt
+      htmlUrl
+      number
+      title
+      labels {
+        nodes {
+          name
+        }
+      }
+      parentEpics {
+        nodes {
+          issue {
+            title
+          }
+        }
+      }
+      assignees {
+        nodes {
+          login
+        }
+      }
+    }
+  }
+}
