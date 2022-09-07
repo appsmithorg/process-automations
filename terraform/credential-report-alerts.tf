@@ -21,13 +21,6 @@ provider "aws" {
   }
 }
 
-variable "function_name" {
-  type        = string
-  default     = "credential-report-alerts"
-  nullable    = false
-  description = "Name of the lambda function"
-}
-
 variable "source_repo" {
   type        = string
   default     = ""
@@ -35,12 +28,12 @@ variable "source_repo" {
 }
 
 resource "aws_lambda_function" "credential-report-alerts" {
-  function_name    = var.function_name
+  function_name    = "credential-report-alerts"
   role             = aws_iam_role.role.arn
   filename         = "../dist-lambda.zip"
   source_code_hash = filebase64sha256("../dist-lambda.zip")
   runtime          = "nodejs16.x"
-  handler          = "dist/${var.function_name}.main"
+  handler          = "dist/${aws_lambda_function.credential-report-alerts.function_name}.main"
   timeout          = 15 * 60 // 15 minutes
   environment {
     variables = {
@@ -50,7 +43,7 @@ resource "aws_lambda_function" "credential-report-alerts" {
 }
 
 resource "aws_iam_role" "role" {
-  name               = var.function_name
+  name               = aws_lambda_function.credential-report-alerts.function_name
   assume_role_policy = data.aws_iam_policy_document.role-policy.json
   inline_policy {
     name   = "lambda-execution"
@@ -83,4 +76,23 @@ data "aws_iam_policy_document" "role-policy" {
 
 data "aws_secretsmanager_secret" "secret" {
   name = "aws-checks"
+}
+
+resource "aws_cloudwatch_event_rule" "everyday" {
+  name                = "everyday"
+  schedule_expression = "cron(0 0 * * MON-FRI *)"
+}
+
+resource "aws_cloudwatch_event_target" "target" {
+  rule      = aws_cloudwatch_event_rule.everyday.name
+  target_id = aws_lambda_function.credential-report-alerts.function_name
+  arn       = aws_lambda_function.credential-report-alerts.arn
+}
+
+resource "aws_lambda_permission" "cloudwatch_invoke_permission" {
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.credential-report-alerts.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.everyday.arn
 }
