@@ -33,7 +33,7 @@ resource "aws_lambda_function" "credential-report-alerts" {
   filename         = "../dist-lambda.zip"
   source_code_hash = filebase64sha256("../dist-lambda.zip")
   runtime          = "nodejs16.x"
-  handler          = "dist/${aws_lambda_function.credential-report-alerts.function_name}.main"
+  handler          = "dist/credential-report-alerts.main"
   timeout          = 15 * 60 // 15 minutes
   environment {
     variables = {
@@ -43,7 +43,7 @@ resource "aws_lambda_function" "credential-report-alerts" {
 }
 
 resource "aws_iam_role" "role" {
-  name               = aws_lambda_function.credential-report-alerts.function_name
+  name               = "credential-report-alerts"
   assume_role_policy = data.aws_iam_policy_document.role-policy.json
   inline_policy {
     name   = "lambda-execution"
@@ -89,7 +89,7 @@ resource "aws_cloudwatch_event_target" "target" {
   arn       = aws_lambda_function.credential-report-alerts.arn
 }
 
-resource "aws_lambda_permission" "cloudwatch_invoke_permission" {
+resource "aws_lambda_permission" "cloudwatch-invoke-permission" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.credential-report-alerts.function_name
