@@ -80,7 +80,7 @@ data "aws_secretsmanager_secret" "secret" {
 
 resource "aws_cloudwatch_event_rule" "everyday" {
   name                = "everyday"
-  schedule_expression = "cron(0 0 * * ? *)"
+  schedule_expression = "cron(0 0 ? * MON-FRI *)"
 }
 
 resource "aws_cloudwatch_event_target" "target" {
