@@ -133,9 +133,7 @@ async function checkAndAlert(slackToken: string, entry: Entry): Promise<void> {
 
     if (messages.length > 0) {
         console.log("Alerts for " + entry.username, messages);
-        if (entry.username === "shrikant@appsmith.com") {
-            await sendSlackAlert(slackToken, entry.username, messages);
-        }
+        await sendSlackAlert(slackToken, entry.username, messages);
     }
 }
 
