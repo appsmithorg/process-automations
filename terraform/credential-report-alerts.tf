@@ -61,6 +61,15 @@ data "aws_iam_policy_document" "credential-report-alerts-policy" {
     actions   = ["secretsmanager:GetSecretValue"]
     resources = [data.aws_secretsmanager_secret.secret.arn]
   }
+
+  statement {
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+    resources = ["arn:aws:logs:*:*:*"]
+  }
 }
 
 data "aws_iam_policy_document" "role-policy" {
