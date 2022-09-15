@@ -8,6 +8,10 @@ import * as http from "http";
 import * as https from "https";
 import {loadSecrets} from "./common/secrets";
 
+const FULL_REPORT_RECIPIENTS = [
+  "shrikant@appsmith.com",
+];
+
 type Entry = {
     username: string
     isPasswordEnabled: boolean
@@ -56,9 +60,11 @@ async function sendCredentialAlerts() {
     const reportCsv = Buffer.from(data.Content).toString();
     console.info(reportCsv);
 
+    const messagesByUser: Record<string, string[]> = {};
+
     for (const line of reportCsv.split("\n").slice(1)) {
         const parts = line.split(",");
-        await checkAndAlert(slackToken, {
+        messagesByUser[parts[0]] = await checkAndAlert(slackToken, {
             username: parts[0],
             isPasswordEnabled: parts[3] === "true",
             passwordLastUsed: parseDate(parts[4]),
@@ -70,6 +76,14 @@ async function sendCredentialAlerts() {
             isAccessKey2Enabled: parts[13] === "true",
             accessKey2LastRotated: parseDate(parts[14]),
         });
+    }
+
+    for (const email of FULL_REPORT_RECIPIENTS) {
+        await slackPostMessage(
+          slackToken,
+          await fetchSlackUserIdFromEmail(slackToken, email),
+          "Credential report:\n\n" + JSON.stringify(messagesByUser, null, 4),
+        )
     }
 }
 
@@ -101,7 +115,7 @@ function parseDate(dateStr: string): null | Date {
     return dateStr === "not_supported" || dateStr === "N/A" ? null : new Date(dateStr);
 }
 
-async function checkAndAlert(slackToken: string, entry: Entry): Promise<void> {
+async function checkAndAlert(slackToken: string, entry: Entry): Promise<string[]> {
     const messages: string[] = [];
 
     if (entry.isPasswordEnabled && entry.passwordNextReset != null) {
@@ -135,6 +149,8 @@ async function checkAndAlert(slackToken: string, entry: Entry): Promise<void> {
         console.log("Alerts for " + entry.username, messages);
         await sendSlackAlert(slackToken, entry.username, messages);
     }
+
+    return messages;
 }
 
 async function sendSlackAlert(slackToken: string, username: string, messages: string[]): Promise<void> {
@@ -153,6 +169,10 @@ async function sendSlackAlert(slackToken: string, username: string, messages: st
         "Link to sign in to AWS: <https://appsmith.signin.aws.amazon.com/console/>. For any questions, please contact us at the <#C02MUD8DNUR> channel.", // The #team-devops channel.
     ].join("\n");
 
+    await slackPostMessage(slackToken, userId, message);
+}
+
+async function slackPostMessage(slackToken: string, userId: string, message: string): Promise<void> {
     const response = await request<{ ok: boolean }>("https://slack.com/api/chat.postMessage", {
         method: "POST",
         headers: {
