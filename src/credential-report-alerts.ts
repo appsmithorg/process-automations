@@ -79,10 +79,19 @@ async function sendCredentialAlerts() {
     }
 
     for (const email of FULL_REPORT_RECIPIENTS) {
+        const lines: string[] = []
+        for (const [username, messages] of Object.entries(messagesByUser)) {
+            if (messages.length > 0) {
+                lines.push(`*${username}*`);
+                for (const message of messages) {
+                    lines.push(`  - ${message}`);
+                }
+            }
+        }
         await slackPostMessage(
           slackToken,
           await fetchSlackUserIdFromEmail(slackToken, email),
-          "Credential report:\n\n" + JSON.stringify(messagesByUser, null, 4),
+          "Credential report:\n\n" + lines.join("\n"),
         )
     }
 }
