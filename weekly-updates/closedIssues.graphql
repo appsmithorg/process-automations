@@ -9,6 +9,9 @@
       htmlUrl
       number
       title
+      estimate {
+        value
+      }
       labels {
         nodes {
           name

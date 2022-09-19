@@ -33,6 +33,9 @@
               number
               title
               closedAt
+              estimate {
+                value
+              }
               parentEpics {
                 nodes {
                   id
@@ -79,6 +82,9 @@
               number
               title
               closedAt
+              estimate {
+                value
+              }
               parentEpics {
                 nodes {
                   id
@@ -125,6 +131,9 @@
               number
               title
               closedAt
+              estimate {
+                value
+              }
               parentEpics {
                 nodes {
                   id
