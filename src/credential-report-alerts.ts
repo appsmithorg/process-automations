@@ -178,7 +178,7 @@ async function sendSlackAlert(slackToken: string, username: string, messages: st
         "Link to sign in to AWS: <https://appsmith.signin.aws.amazon.com/console/>. For any questions, please contact us at the <#C02MUD8DNUR> channel.", // The #team-devops channel.
     ].join("\n");
 
-    // await slackPostMessage(slackToken, userId, message);
+    await slackPostMessage(slackToken, userId, message);
 }
 
 async function slackPostMessage(slackToken: string, userId: string, message: string): Promise<void> {
