@@ -178,7 +178,7 @@ async function sendSlackAlert(slackToken: string, username: string, messages: st
         "Link to sign in to AWS: <https://appsmith.signin.aws.amazon.com/console/>. For any questions, please contact us at the <#C02MUD8DNUR> channel.", // The #team-devops channel.
     ].join("\n");
 
-    await slackPostMessage(slackToken, userId, message);
+    // await slackPostMessage(slackToken, userId, message);
 }
 
 async function slackPostMessage(slackToken: string, userId: string, message: string): Promise<void> {
@@ -202,11 +202,22 @@ async function slackPostMessage(slackToken: string, userId: string, message: str
 }
 
 async function fetchSlackUserIdFromEmail(slackToken: string, email: string): Promise<string> {
-    const response = await request<{ user: { id: string } }>("https://slack.com/api/users.lookupByEmail?email=" + email, {
+    // Don't ask.
+    if (email === "nikhil@appsmith.com") {
+        email = "nikhil.nandagopal@gmail.com"
+    }
+
+    const response = await request<{ user?: { id: string } }>("https://slack.com/api/users.lookupByEmail?email=" + email, {
         headers: {
             "Authorization": "Bearer " + slackToken,
         },
     });
+
+    if (response.user == null) {
+        console.error("No user found for email. Full response from Slack: ", response);
+        throw new Error("No user found for email " + email);
+    }
+
     return response.user.id;
 }
 
