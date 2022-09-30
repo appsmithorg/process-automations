@@ -129,10 +129,11 @@ async function checkAndAlert(slackToken: string, entry: Entry): Promise<string[]
 
     if (entry.isPasswordEnabled && entry.passwordNextReset != null) {
         const daysToNextReset = Math.ceil((entry.passwordNextReset.valueOf() - Date.now()) / (1000 * 60 * 60 * 24));
+        const suffix = ` Also, see <https://www.notion.so/appsmith/AWS-33be6d3432af4629832723b61481311b#72cce092ca7f40ffbf9213f66dfc516c|password policy>.`;
         if (daysToNextReset < 0) {
-            messages.push(`Your password expired ${-daysToNextReset} days ago. Please change immediately.`);
+            messages.push(`Your password expired ${-daysToNextReset} days ago. Please change immediately.` + suffix);
         } else if (daysToNextReset < 7) {
-            messages.push(`Your password will expire in ${daysToNextReset} day(s). Please change soon.`);
+            messages.push(`Your password will expire in ${daysToNextReset} day(s). Please change soon.` + suffix);
         }
     }
 
