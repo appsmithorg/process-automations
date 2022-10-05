@@ -10,7 +10,7 @@
   "devDependencies": {
     "@aws-sdk/client-iam": "^3.163.0",
     "@aws-sdk/client-secrets-manager": "^3.163.0",
-    "@types/node": "^17.0.23",
+    "@types/node": "^18.8.2",
     "@typescript-eslint/eslint-plugin": "^5.31.0",
     "@typescript-eslint/parser": "^5.16.0",
     "@vercel/ncc": "^0.33.3",
