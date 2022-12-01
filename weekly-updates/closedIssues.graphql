@@ -29,6 +29,12 @@
           login
         }
       }
+      pipelineIssue(workspaceId: "${workspaceId}") {
+        pipeline {
+          id
+          name
+        }
+      }
     }
   }
 }

@@ -28,10 +28,11 @@ let issueTypeMap = {
   Bug: "🐞",
   Enhancement: "💡",
   Task: "🔨",
-  Chore: "🔨",
+  Chore: "🧹",
 };
 
 let issueTypeKeys = Object.keys(issueTypeMap);
+let otherClosedPipeline = ['Dev closed', 'Design / PRD closed'];
 
 const ADHOC = "Ad-hoc tasks";
 
@@ -101,7 +102,7 @@ getPlannedTasks = async (sprint) => {
 
   for (const issue of issues) {
     let existingIssues = [];
-    if (!!issue.closedAt) {
+    if (!!issue.closedAt || otherClosedPipeline.includes(issue.pipelineIssue.pipeline.name)) {
       continue;
     }
     if (issue.parentEpics.nodes.length === 0) {
@@ -146,7 +147,7 @@ getSpilledTasks = async (sprint) => {
 
   for (const issue of issues) {
     let existingIssues = [];
-    if (!!issue.closedAt) {
+    if (!!issue.closedAt || otherClosedPipeline.includes(issue.pipelineIssue.pipeline.name)) {
       continue;
     }
     if (issue.parentEpics.nodes.length === 0) {
@@ -173,15 +174,15 @@ getSpilledTasks = async (sprint) => {
 };
 
 getClosedTasks = async (issues, enclosedIn) => {
-
   issues = issues.filter((issue) => {
-    let isClosed = !!issue.closedAt;
+    let isTempClosed = otherClosedPipeline.includes(issue.pipelineIssue.pipeline.name)
+    let isClosed = !!issue.closedAt || isTempClosed
     let closedAtMs = moment(issue.closedAt).valueOf();
     let isClosedThisWeek =
       closedAtMs > enclosedIn.isoWeekday(1).valueOf() &&
       closedAtMs < enclosedIn.isoWeekday(7).valueOf();
 
-    return isClosed && isClosedThisWeek;
+    return isClosed && (isClosedThisWeek || isTempClosed);
   });
 
   let categories = new Map();
@@ -220,7 +221,15 @@ getClosedTasks = async (issues, enclosedIn) => {
   return closedIssues;
 };
 
+function isEmpty(obj) {
+  return Object.keys(obj).length === 0 && obj.constructor === Object;
+}
+
 getFormattedTasks = (categorizedIssues, isClosed) => {
+  if (isEmpty(categorizedIssues)) {
+    return "";
+  }
+
   let issueRow =
     "- ${issueType} [ ${priority} ] [${issueNo}](https://github.com/appsmithorg/appsmith/issues/${issueNo}): ${title} ${status} (${estimate} SP) | **${assignees}**";
   let compiledRow = compile(issueRow);
@@ -288,7 +297,6 @@ getReport = async () => {
   const zenhubData = await getZenhubInfo();
   const closedIssuesData = await getClosedIssuesInfo();
   const workspaceData = zenhubData.data.viewer.searchWorkspaces.nodes[0];
-  
 
   // Figure out where in the sprint we currently are
   let currentSprintEndDate = workspaceData.activeSprint.endAt;
@@ -303,24 +311,29 @@ getReport = async () => {
     // Only on Mondays, we actually want to see the report for last week
     enclosedIn.subtract(3, "days");
   }
+
+  // merge the issues from the active sprint and the closed issues
+  // to get the total list of issues that have closed (other that the closed pipleine)
+  let allClosedIssues = workspaceData.activeSprint.issues.nodes.concat(closedIssuesData.data.searchClosedIssues.nodes);
+
   if (dateDiff <= 3) {
     // This sprint is about to end, planned tasks will be taken from the next sprint
     plannedTasks = await getPlannedTasks(workspaceData.upcomingSprint);
     spilledTasks = await getSpilledTasks(workspaceData.activeSprint);
-    closedTasks = await getClosedTasks(closedIssuesData.data.searchClosedIssues.nodes, enclosedIn);
+    closedTasks = await getClosedTasks(allClosedIssues, enclosedIn);
   } else if (dateDiff > 3) {
     // We have started a new sprint recently, use closed issue data from previous sprint
     plannedTasks = await getPlannedTasks(workspaceData.activeSprint);
-    spilledTasks = await getSpilledTasks(workspaceData.previousSprint);
+    spilledTasks = {};
     closedTasks = await getClosedTasks(
-      closedIssuesData.data.searchClosedIssues.nodes,
+      allClosedIssues,
       enclosedIn
     );
   } else {
     // We're in the middle of the sprint, planned tasks will be taken from the current sprint
     plannedTasks = await getPlannedTasks(workspaceData.activeSprint);
     spilledTasks = {};
-    closedTasks = await getClosedTasks(closedIssuesData.data.searchClosedIssues.nodes, enclosedIn);
+    closedTasks = await getClosedTasks(allClosedIssues, enclosedIn);
   }
 
   // Create markdown output for each section to be reported
@@ -328,10 +341,10 @@ getReport = async () => {
   let spilledTasksMd = getFormattedTasks(spilledTasks);
   let closedTasksMd = getFormattedTasks(closedTasks, true);
 
-  let spilledSection = spilledTasks == {} ? "" : "\n## Spillover\n---\n" + spilledTasksMd;
+  let spilledSection = isEmpty(spilledTasks) ? "" : "\n## Spillover\n---\n" + spilledTasksMd;
 
   return (
-    "\n## What did we close?\n---\n" +
+    "\n## What did we close?\n---\n" + 
     closedTasksMd +
     spilledSection +
     "\n## What are we working on?\n---\n" +
