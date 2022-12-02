@@ -171,12 +171,26 @@ getSpilledTasks = async (sprint) => {
   }
 
   return categorizedIssues;
+  
 };
+
+// Function to find repeted objects and merge them
+getUniqObj = (issues) => {
+  let set = new Set();
+  let unionArray = issues.filter(item => {
+    if (!set.has(item.number)) {
+      set.add(item.number);
+      return true;
+    }
+    return false;
+  }, set);
+  return unionArray;
+}
 
 getClosedTasks = async (issues, enclosedIn) => {
   issues = issues.filter((issue) => {
     let isTempClosed = otherClosedPipeline.includes(issue.pipelineIssue.pipeline.name)
-    let isClosed = !!issue.closedAt || isTempClosed
+    let isClosed = !!issue.closedAt || isTempClosed;
     let closedAtMs = moment(issue.closedAt).valueOf();
     let isClosedThisWeek =
       closedAtMs > enclosedIn.isoWeekday(1).valueOf() &&
@@ -267,7 +281,10 @@ getFormattedTasks = (categorizedIssues, isClosed) => {
           `[${assignee.login}]("https://github.com/${assignee.login}")`
       );
       const pipelineName = issue.pipelineIssue.pipeline.name;
-      let status = isClosed ? (otherClosedPipeline.includes(pipelineName) ? "`" + pipelineName.toUpperCase() + "`" : "") : "`" + pipelineName.toUpperCase() + "`";
+      let status = isClosed ? 
+        (otherClosedPipeline.includes(pipelineName) ?  
+          "`" + pipelineName.toUpperCase() + "`" : "") : 
+        "`" + pipelineName.toUpperCase() + "`";
       let resolvedRow = resolveToString(compiledRow, {
         issueType: issueTypeMap[issueType] || "⬛",
         priority: priorityMap[priority] || "⚪ N/A-",
@@ -314,26 +331,27 @@ getReport = async () => {
 
   // merge the issues from the active sprint and the closed issues
   // to get the total list of issues that have closed (other that the closed pipleine)
-  let allClosedIssues = workspaceData.activeSprint.issues.nodes.concat(closedIssuesData.data.searchClosedIssues.nodes);
+  let allClosedIssues = [...workspaceData.activeSprint.issues.nodes, ...closedIssuesData.data.searchClosedIssues.nodes]
+  let uniqClosedIssues = getUniqObj(allClosedIssues)
 
   if (dateDiff <= 3) {
     // This sprint is about to end, planned tasks will be taken from the next sprint
     plannedTasks = await getPlannedTasks(workspaceData.upcomingSprint);
     spilledTasks = await getSpilledTasks(workspaceData.activeSprint);
-    closedTasks = await getClosedTasks(allClosedIssues, enclosedIn);
+    closedTasks = await getClosedTasks(uniqClosedIssues, enclosedIn);
   } else if (dateDiff > 3) {
     // We have started a new sprint recently, use closed issue data from previous sprint
     plannedTasks = await getPlannedTasks(workspaceData.activeSprint);
     spilledTasks = {};
     closedTasks = await getClosedTasks(
-      allClosedIssues,
+      uniqClosedIssues,
       enclosedIn
     );
   } else {
     // We're in the middle of the sprint, planned tasks will be taken from the current sprint
     plannedTasks = await getPlannedTasks(workspaceData.activeSprint);
     spilledTasks = {};
-    closedTasks = await getClosedTasks(allClosedIssues, enclosedIn);
+    closedTasks = await getClosedTasks(uniqClosedIssues, enclosedIn);
   }
 
   // Create markdown output for each section to be reported
