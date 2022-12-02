@@ -266,15 +266,15 @@ getFormattedTasks = (categorizedIssues, isClosed) => {
         (assignee) =>
           `[${assignee.login}]("https://github.com/${assignee.login}")`
       );
+      const pipelineName = issue.pipelineIssue.pipeline.name;
+      let status = isClosed ? (otherClosedPipeline.includes(pipelineName) ? "`" + pipelineName.toUpperCase() + "`" : "") : "`" + pipelineName.toUpperCase() + "`";
       let resolvedRow = resolveToString(compiledRow, {
         issueType: issueTypeMap[issueType] || "⬛",
         priority: priorityMap[priority] || "⚪ N/A-",
         issueNo: issue.number,
         title: issue.title,
         estimate: issue.estimate ? issue.estimate.value : "No estimate",
-        status: isClosed
-          ? ""
-          : "`" + issue.pipelineIssue.pipeline.name.toUpperCase() + "`",
+        status: status,
         assignees: assignees.join(", "),
       });
 
