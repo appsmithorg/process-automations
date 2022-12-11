@@ -2,7 +2,10 @@ import githubQuery from "./common/github-graphql-query"
 
 // Ref: <https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/using-the-api-to-manage-projects>.
 
-main().catch((error) => console.error(error))
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})
 
 type Project = {
   title: string
