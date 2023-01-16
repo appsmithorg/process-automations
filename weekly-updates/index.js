@@ -4,7 +4,7 @@ const fs = require("fs");
 const template = require("es6-template-strings");
 const moment = require("moment");
 const compile = require("es6-template-strings/compile"),
-  resolveToString = require("es6-template-strings/resolve-to-string");
+resolveToString = require("es6-template-strings/resolve-to-string");
 
 let currentDate;
 
@@ -14,6 +14,8 @@ let workspaceMap = {
   "FE Coders Pod": "6167d1b64ee5f20014242ab7",
   "Performance Board": "6231ad37179efb001826a53f"
 }
+
+let sprintStates = ['previousSprint', 'activeSprint', 'upcomingSprint']
 
 let priorityMap = {
   Critical: `🔴 Crit-`,
@@ -36,8 +38,8 @@ let otherClosedPipeline = ['Dev closed', 'Design / PRD closed'];
 
 const ADHOC = "Ad-hoc tasks";
 
-getZenhubInfo = async () => {
-  let fileName = path.resolve(__dirname, "zenhubInfo.graphql");
+getZenhubSprintInfo = async (index) => {
+  let fileName = path.resolve(__dirname, "graphql/"+sprintStates[index]+".graphql");
   const fileData = fs.readFileSync(fileName, "utf8");
   const query = template(fileData, { podName: process.env.POD , workspaceId: workspaceMap[process.env.POD]});
   let body = {
@@ -57,7 +59,7 @@ getZenhubInfo = async () => {
 };
 
 getClosedIssuesInfo = async () => {
-  let fileName = path.resolve(__dirname, "closedIssues.graphql");
+  let fileName = path.resolve(__dirname, "graphql/closedIssues.graphql");
   const fileData = fs.readFileSync(fileName, "utf8");
   const query = template(fileData, {workspaceId: workspaceMap[process.env.POD]});
   let body = {
@@ -303,20 +305,23 @@ getFormattedTasks = (categorizedIssues, isClosed) => {
   return sections.join("\n");
 };
 
+/**
+ * We don't need to check by pipelines since the assumption is that
+ * whenever the report is generated, the relevant sprints have been planned
+ * We also cannot get all data in one go, zenhub has introduce rate limiting by complexity
+ * So we need to make multiple calls to get all the data for previous, active and upcoming sprints
+ */
 getReport = async () => {
-  // We don't need to check by pipelines since the assumption is that
-  // whenever the report is generated, the relevant sprints have been planned
-  // const ongoingPipelines = process.env.ONGOING_PIPELINES.split(", ");
-
-  // Get all the data from Zenuhb in one go
-  // Uncomment the following like to use static data instead
-  // const zenhubData = await getZenhubInfoStatic();
-  const zenhubData = await getZenhubInfo();
+  const prevSprintData = await getZenhubSprintInfo(0);
+  const activeSprintData = await getZenhubSprintInfo(1);
+  const futureSprintData = await getZenhubSprintInfo(2);
   const closedIssuesData = await getClosedIssuesInfo();
-  const workspaceData = zenhubData.data.viewer.searchWorkspaces.nodes[0];
+  const activeSprintworkspaceData = activeSprintData.data.workspace.activeSprint;
+  const previousSprintworkspaceData = prevSprintData.data.workspace.previousSprint;
+  const futureSprintworkspaceData = futureSprintData.data.workspace.upcomingSprint;
 
   // Figure out where in the sprint we currently are
-  let currentSprintEndDate = workspaceData.activeSprint.endAt;
+  let currentSprintEndDate = activeSprintworkspaceData.endAt;
   let dateDiff = moment(currentSprintEndDate).diff(currentDate, "days");
 
   let plannedTasks;
@@ -331,17 +336,22 @@ getReport = async () => {
 
   // merge the issues from the active sprint and the closed issues
   // to get the total list of issues that have closed (other that the closed pipleine)
-  let allClosedIssues = [...workspaceData.activeSprint.issues.nodes, ...closedIssuesData.data.searchClosedIssues.nodes]
+  let allClosedIssues = [
+    ...activeSprintworkspaceData.issues.nodes,
+    ...previousSprintworkspaceData.issues.nodes,
+    ...futureSprintworkspaceData.issues.nodes,
+    ...closedIssuesData.data.searchClosedIssues.nodes
+  ]
   let uniqClosedIssues = getUniqObj(allClosedIssues)
 
   if (dateDiff <= 3) {
     // This sprint is about to end, planned tasks will be taken from the next sprint
-    plannedTasks = await getPlannedTasks(workspaceData.upcomingSprint);
-    spilledTasks = await getSpilledTasks(workspaceData.activeSprint);
+    plannedTasks = await getPlannedTasks(futureSprintworkspaceData);
+    spilledTasks = await getSpilledTasks(activeSprintworkspaceData);
     closedTasks = await getClosedTasks(uniqClosedIssues, enclosedIn);
   } else if (dateDiff > 3) {
     // We have started a new sprint recently, use closed issue data from previous sprint
-    plannedTasks = await getPlannedTasks(workspaceData.activeSprint);
+    plannedTasks = await getPlannedTasks(activeSprintworkspaceData);
     spilledTasks = {};
     closedTasks = await getClosedTasks(
       uniqClosedIssues,
@@ -349,7 +359,7 @@ getReport = async () => {
     );
   } else {
     // We're in the middle of the sprint, planned tasks will be taken from the current sprint
-    plannedTasks = await getPlannedTasks(workspaceData.activeSprint);
+    plannedTasks = await getPlannedTasks(activeSprintworkspaceData);
     spilledTasks = {};
     closedTasks = await getClosedTasks(uniqClosedIssues, enclosedIn);
   }

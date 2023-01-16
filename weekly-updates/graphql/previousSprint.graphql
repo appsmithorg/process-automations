@@ -1,0 +1,52 @@
+{
+  workspace(id: "${workspaceId}") {
+    previousSprint {
+      startAt
+      endAt
+      totalPoints
+      issues {
+        nodes {
+          id
+          ghId
+          htmlUrl
+          number
+          title
+          closedAt
+          estimate {
+            value
+          }
+          parentEpics {
+            nodes {
+              id
+              issue {
+                id
+                ghId
+                htmlUrl
+                title
+              }
+            }
+          }
+          labels {
+            nodes {
+              id
+              name
+            }
+          }
+          assignees {
+            nodes {
+              id
+              name
+              login
+            }
+          }
+          pipelineIssue(workspaceId: "${workspaceId}") {
+            pipeline {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+}
