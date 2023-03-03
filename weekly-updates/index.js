@@ -192,11 +192,11 @@ getUniqObj = (issues) => {
 getClosedTasks = async (issues, enclosedIn) => {
   issues = issues.filter((issue) => {
     let isTempClosed = otherClosedPipeline.includes(issue.pipelineIssue.pipeline.name)
-    let isClosed = !!issue.closedAt || isTempClosed;
+    let isClosed = (issue.closedAt ? true : false) || isTempClosed;
     let closedAtMs = moment(issue.closedAt).valueOf();
     let isClosedThisWeek =
-      closedAtMs > enclosedIn.isoWeekday(1).valueOf() &&
-      closedAtMs < enclosedIn.isoWeekday(7).valueOf();
+      closedAtMs > enclosedIn.startOf('week').valueOf() &&
+      closedAtMs <= enclosedIn.endOf('week').valueOf();
 
     return isClosed && (isClosedThisWeek || isTempClosed);
   });
@@ -369,13 +369,13 @@ getReport = async () => {
   let spilledTasksMd = getFormattedTasks(spilledTasks);
   let closedTasksMd = getFormattedTasks(closedTasks, true);
 
-  let spilledSection = isEmpty(spilledTasks) ? "" : "\n## Spillover\n---\n" + spilledTasksMd;
+  let spilledSection = isEmpty(spilledTasks) ? "" : "\n## Spillover("+ activeSprintworkspaceData.totalPoints +" SP)\n---\n" + spilledTasksMd;
 
   return (
     "\n## What did we close?\n---\n" + 
     closedTasksMd +
     spilledSection +
-    "\n## What are we working on?\n---\n" +
+    "\n## What are we working on? ("+ futureSprintworkspaceData.totalPoints +" SP)\n---\n" +
     plannedTasksMd
   );
 };
