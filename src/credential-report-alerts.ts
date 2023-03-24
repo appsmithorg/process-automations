@@ -1,8 +1,8 @@
 import {
     GenerateCredentialReportCommand,
     GetCredentialReportCommand,
-    GetCredentialReportCommandOutput,
-    IAMClient
+    GetCredentialReportCommandOutput, GetUserCommand, GetUserCommandOutput,
+    IAMClient,
 } from "@aws-sdk/client-iam";
 import * as http from "http";
 import * as https from "https";
@@ -47,11 +47,11 @@ async function sendCredentialAlerts() {
         throw new Error("slackToken is not set or invalid.");
     }
 
-    const client = new IAMClient({
+    const iamClient = new IAMClient({
         region: "us-east-1",
     });
 
-    const data: GetCredentialReportCommandOutput = await fetchReport(client);
+    const data: GetCredentialReportCommandOutput = await fetchReport(iamClient);
 
     if (data.Content == null) {
         throw new Error("No content in report.");
@@ -64,7 +64,7 @@ async function sendCredentialAlerts() {
 
     for (const line of reportCsv.split("\n").slice(1)) {
         const parts = line.split(",");
-        messagesByUser[parts[0]] = await checkAndAlert(slackToken, {
+        messagesByUser[parts[0]] = await checkAndAlert(iamClient, slackToken, {
             username: parts[0],
             isPasswordEnabled: parts[3] === "true",
             passwordLastUsed: parseDate(parts[4]),
@@ -96,21 +96,21 @@ async function sendCredentialAlerts() {
     }
 }
 
-async function fetchReport(client: IAMClient): Promise<GetCredentialReportCommandOutput> {
+async function fetchReport(iamClient: IAMClient): Promise<GetCredentialReportCommandOutput> {
     try {
-        return await client.send(new GetCredentialReportCommand({}));
+        return await iamClient.send(new GetCredentialReportCommand({}));
 
     } catch (err: any) {
         if (err.Code === "ReportNotPresent") {
             console.log("Report not present. Generating...");
-            await client.send(new GenerateCredentialReportCommand({}));
+            await iamClient.send(new GenerateCredentialReportCommand({}));
             await new Promise(resolve => setTimeout(resolve, 3000));
-            return await fetchReport(client);
+            return await fetchReport(iamClient);
 
         } else if (err.Code === "ReportInProgress") {
             console.log("Report in progress. Retrying...");
             await new Promise(resolve => setTimeout(resolve, 3000));
-            return await fetchReport(client);
+            return await fetchReport(iamClient);
 
         } else {
             throw err;
@@ -124,55 +124,68 @@ function parseDate(dateStr: string): null | Date {
     return dateStr === "not_supported" || dateStr === "N/A" ? null : new Date(dateStr);
 }
 
-async function checkAndAlert(slackToken: string, entry: Entry): Promise<string[]> {
-    const messages: string[] = [];
+async function checkAndAlert(iamClient: IAMClient, slackToken: string, entry: Entry): Promise<string[]> {
+    const expiryMessages: string[] = [];
+    const almostExpiryMessages: string[] = [];
 
     if (entry.isPasswordEnabled && entry.passwordNextReset != null) {
         const daysToNextReset = Math.ceil((entry.passwordNextReset.valueOf() - Date.now()) / (1000 * 60 * 60 * 24));
         const suffix = ` Also, see <https://www.notion.so/appsmith/AWS-33be6d3432af4629832723b61481311b#72cce092ca7f40ffbf9213f66dfc516c|password policy>.`;
         if (daysToNextReset < 0) {
-            messages.push(`Your password expired ${-daysToNextReset} days ago. Please change immediately.` + suffix);
-        } else if (daysToNextReset < 7) {
-            messages.push(`Your password will expire in ${daysToNextReset} day(s). Please change soon.` + suffix);
+            expiryMessages.push(`Your password expired ${-daysToNextReset} days ago. Please change immediately.` + suffix);
+        } else if (daysToNextReset < 3) {
+            almostExpiryMessages.push(`Your password will expire in ${daysToNextReset} day(s). Please change soon.` + suffix);
         }
     }
 
     if (entry.isPasswordEnabled && !entry.isMFASet) {
-        messages.push("Your don't have MFA enabled. Please set up MFA immediately.");
+        expiryMessages.push("Your don't have MFA enabled. Please set up MFA immediately.");
     }
 
     if (entry.isAccessKey1Enabled && entry.accessKey1LastRotated != null) {
         const ageInDays = Math.ceil((Date.now() - entry.accessKey1LastRotated.valueOf()) / (1000 * 60 * 60 * 24));
-        if (ageInDays > 80) {
-            messages.push(`Your access key 1 is ${ageInDays} days old. Access keys should be rotated every 90 days. Please regenerate this key ${ageInDays > 90 ? "immediately" : "soon"}.`);
+        if (ageInDays > 85) {
+            (ageInDays > 90 ? expiryMessages : almostExpiryMessages)
+                .push(`Your access key 1 is ${ageInDays} days old. Access keys should be rotated every 90 days. Please regenerate this key ${ageInDays > 90 ? "immediately" : "soon"}.`);
         }
     }
 
     if (entry.isAccessKey2Enabled && entry.accessKey2LastRotated != null) {
         const ageInDays = Math.ceil((Date.now() - entry.accessKey2LastRotated.valueOf()) / (1000 * 60 * 60 * 24));
-        if (ageInDays > 80) {
-            messages.push(`Your access key 2 is ${ageInDays} days old. Access keys should be rotated every 90 days. Please regenerate this key ${ageInDays > 90 ? "immediately" : "soon"}.`);
+        if (ageInDays > 85) {
+            (ageInDays > 90 ? expiryMessages : almostExpiryMessages)
+                .push(`Your access key 2 is ${ageInDays} days old. Access keys should be rotated every 90 days. Please regenerate this key ${ageInDays > 90 ? "immediately" : "soon"}.`);
         }
     }
 
-    if (messages.length > 0) {
-        console.log("Alerts for " + entry.username, messages);
-        await sendSlackAlert(slackToken, entry.username, messages);
+    if (expiryMessages.length + almostExpiryMessages.length > 0) {
+        console.log("Alerts for " + entry.username, expiryMessages);
+        await sendSlackAlert(iamClient, slackToken, entry.username, [...expiryMessages, ...almostExpiryMessages]);
     }
 
-    return messages;
+    return expiryMessages;
 }
 
-async function sendSlackAlert(slackToken: string, username: string, messages: string[]): Promise<void> {
-    if (!username.endsWith("@appsmith.com")) {
+async function sendSlackAlert(iamClient: IAMClient, slackToken: string, username: string, messages: string[]): Promise<void> {
+    let email = username;
+    if (!email.endsWith("@appsmith.com")) {
+        const userDetails: GetUserCommandOutput = await iamClient.send(new GetUserCommand({ UserName: username }))
+        for (const tag of userDetails.User?.Tags ?? []) {
+            if (tag.Key === "Owner" && tag.Value) {
+                email = tag.Value;
+            }
+        }
+    }
+
+    if (!email || !email.endsWith("@appsmith.com")) {
         console.log("Not sending slack alert to potentially non-human user", username);
         return;
     }
 
-    const userId: string = await fetchSlackUserIdFromEmail(slackToken, username);
+    const userId: string = await fetchSlackUserIdFromEmail(slackToken, email);
 
     const message = [
-        "Hey <@" + userId + ">! You have some old credentials on our AWS account. Please take some time to change/rotate them.",
+        `Hey <@${ userId }>! You have some old credentials on our AWS account, in the IAM user \`${ username }\`. Please take some time to change/rotate them.`,
         "",
         "\t- " + messages.join("\n\t- "),
         "",
