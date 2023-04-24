@@ -182,7 +182,13 @@ async function sendSlackAlert(iamClient: IAMClient, slackToken: string, username
         return;
     }
 
-    const userId: string = await fetchSlackUserIdFromEmail(slackToken, email);
+    let userId: string;
+    try {
+        userId = await fetchSlackUserIdFromEmail(slackToken, email);
+    } catch (err: unknown) {
+        console.log("Failed to fetch slack user id for email", email, err);
+        return;
+    }
 
     const message = [
         `Hey <@${ userId }>! You have some old credentials on our AWS account, in the IAM user \`${ username }\`. Please take some time to change/rotate them.`,
