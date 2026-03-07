@@ -20,7 +20,7 @@ jobs:
           cache: yarn
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           audience: sts.amazonaws.com
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_FOR_DEPLOY_LAMBDA }}
