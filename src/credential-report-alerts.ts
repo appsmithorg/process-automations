@@ -8,9 +8,7 @@ import * as http from "http";
 import * as https from "https";
 import {loadSecrets} from "./common/secrets";
 
-const FULL_REPORT_RECIPIENTS = [
-  "shrikant@appsmith.com",
-];
+const FULL_REPORT_RECIPIENTS = [];
 
 type Entry = {
     username: string
